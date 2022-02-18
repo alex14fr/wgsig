@@ -103,6 +103,10 @@ where
 CLFLG & 0x0001  is nonzero when the client requests not to update its endpoint information in server database
 CLFLG & 0x0002  is nonzero when the client requests not to update its TAI64N information in server database
 
+No database modification should be performed by the server if the peer is not in the database and endpoint update is not requested.
+
+A request to update endpoint information but not update TAI64N should be handled by the server as a request to update both endpoint and TAI64N (ie. CFLG & 0x0003 zero).
+
 Request datagram payload is 82 bytes in size.
 
 

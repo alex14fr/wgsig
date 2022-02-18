@@ -33,7 +33,7 @@
 
 int main(int argc, char **argv) {
 	if(argc<6) {
-		printf("Usage : %s <remote_host> <remote_port> <base64_peerid> <secret_file> <local_port>\n", argv[0]);
+		printf("Usage : %s <remote_host> <remote_port> <base64_peerid> <secret_file> <local_port>\n<local_port> is even to request to update server's endpoint information", argv[0]);
 		exit(0);
 	}
 	if(strlen(argv[3])!=44) {
@@ -81,6 +81,12 @@ int main(int argc, char **argv) {
 	uint32_t tns=htobe32((uint32_t)tp.tv_nsec);
 	*(uint64_t*)(outpacket+pkt_counter_off)=tai64;
 	*(uint32_t*)(outpacket+pkt_counter_off+8)=tns; 
+	// set CLFLG for odd-numbered local ports
+	if(atoi(argv[5]) % 2 == 1) {
+		uint16_t clflg=htons(1);
+		*(uint16_t*)(outpacket+pkt_clflg_off)=clflg;
+	}
+	// compute HMAC
 	hmac_sha256(outpacket+pkt_hmac_off, outpacket, pkt_size-hmac_size, secret, secret_size);
 	//for(int i=0;i<pkt_size;i++) { printf("%x ",outpacket[i]); } printf("\n");
 	// send request datagram
@@ -114,7 +120,8 @@ int main(int argc, char **argv) {
 					}
 				}
 			}
-			printf("[Interface]\nListenPort = %d\n", atoi(argv[5]));
+			if(atoi(argv[5]) % 2 == 0)
+				printf("[Interface]\nListenPort = %d\n", atoi(argv[5]));
 		}
 	}
 }

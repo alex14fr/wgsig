@@ -21,8 +21,9 @@
 #define counter_off port_off+2
 #define pkt_id_off 0
 #define pkt_counter_off peer_id_size
-#define pkt_zero_off peer_id_size+12
-#define pkt_hmac_off pkt_zero_off+6
+#define pkt_clflg_off pkt_counter_off+12
+#define pkt_group_off pkt_clflg_off+2
+#define pkt_hmac_off pkt_group_off+4
 #define hmac_size 32
 #define secret_size 32
 #define ip_mask htobe32(0x322dccac)

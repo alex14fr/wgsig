@@ -50,27 +50,40 @@ void peer_search(unsigned char peer_id[peer_id_size], unsigned char *out) {
 	}
 }
 
+// update database record at index, log and recompute HMAC of response payload
+void peer_replace_at(int index, unsigned char new_peer[rec_size], uint16_t update_endpoint) {
+	if(update_endpoint) {
+		// update the whole record
+		memcpy(peer_data+index*rec_size, new_peer, rec_size);
+	} else {
+		// update TAI64N counter only
+		memcpy(peer_data+index*rec_size+38, new_peer+38, 12);
+	}
+	//if(update_endpoint) { printf("Endpoint updated\n"); }
+	//else { printf("Endpoint NOT updated\n"); }
+	print_record(peer_data+index*rec_size, NULL, 0);
+	hmac_sha256(peer_data+rec_size*keep_peers+8, peer_data, rec_size*keep_peers+8, secret, secret_size);
+}
+
 // update database by adding (or updating) new_peer record
-void peer_replace(unsigned char new_peer[rec_size]) {
+void peer_replace(unsigned char new_peer[rec_size], uint16_t update_endpoint) {
 	for(int i=0;i<keep_peers;i++) {
 		int j;
 		for(j=0;j<peer_id_size && peer_data[i*rec_size+j]==new_peer[j];j++);
 		if(j==peer_id_size) {
-			// peer already in database, replace it, log and recompute HMAC of response payload
-			memcpy(peer_data+i*rec_size, new_peer, rec_size);
-			print_record(peer_data+i*rec_size, NULL, 0);
-			hmac_sha256(peer_data+rec_size*keep_peers+8, peer_data, rec_size*keep_peers+8, secret, secret_size);
+			// peer already in database
+			peer_replace_at(i, new_peer, update_endpoint);
 			return;
 		}
 	}
-	// peer not in database, add it, log and recompute HMAC of response payload
-	memcpy(peer_data+peer_ptr*rec_size, new_peer, rec_size);
-	print_record(peer_data+peer_ptr*rec_size, NULL, 0);
-	peer_ptr++;
-	hmac_sha256(peer_data+rec_size*keep_peers+8, peer_data, rec_size*keep_peers+8, secret, secret_size);
+	// peer not in database, don't add to database if endpoint update not requested
+	if(update_endpoint) {
+		peer_replace_at(peer_ptr, new_peer, 1);
+		peer_ptr++;
+	}
 }
 
-// check if packet ok
+// check whether packet is valid
 // returns
 //  0 for accepted packet
 //  1 for rejected packet
@@ -144,14 +157,22 @@ int main(int argc, char **argv) {
 	while(recvfrom(sock,inpacket,pkt_size,0,(struct sockaddr*)&cl_addr,&cl_addrlen)) {
 		if(packet_ok(inpacket)) {
 			// create record associated with this request
-			unsigned char this_peer[rec_size];
-			memcpy(this_peer, inpacket, peer_id_size);
-			memcpy(this_peer+addr_off, &(cl_addr.sin_addr), 4);
-			*(uint32_t*)(this_peer+addr_off)^=ip_mask;
-			memcpy(this_peer+port_off, &(cl_addr.sin_port), 2);
-			memcpy(this_peer+counter_off, inpacket+peer_id_size, 12);
-			// insert record
-			peer_replace(this_peer);
+			uint16_t clflg=*(uint16_t*)(inpacket+pkt_clflg_off);
+			clflg=ntohs(clflg);
+			// illogical request, update endpoint without updating TAI64: force update of both
+			if(!(clflg&1)&&(clflg&2)) clflg&=~3;
+			if(!(clflg&1)||!(clflg&2)) { // if an update is requested
+				unsigned char this_peer[rec_size];
+				memcpy(this_peer, inpacket, peer_id_size);
+				if(!(clflg&1)) { // if endpoint update is requested
+					memcpy(this_peer+addr_off, &(cl_addr.sin_addr), 4);
+					*(uint32_t*)(this_peer+addr_off)^=ip_mask;
+					memcpy(this_peer+port_off, &(cl_addr.sin_port), 2);
+				}
+				memcpy(this_peer+counter_off, inpacket+peer_id_size, 12);
+				// insert record
+				peer_replace(this_peer, !(clflg&1));
+			}
 			// send response datagram
 			if(sendto(sock,peer_data,rec_size*keep_peers+8+hmac_size,0,(struct sockaddr*)&cl_addr,cl_addrlen)<0) perror("sendto"); 
 		}

@@ -64,7 +64,7 @@ Each client request generates two UDP datagrams, one in each direction. The requ
    $ ./wgsigd secret 1223
 ```
 
- - On each peer, launch client with:
+ - On each peer, launch client on port 10000 (use even-numbered port) with:
 
 ```
    $ ./wgsigc server-hostname 1223 $(cat wg_pubkey) secret 10000
@@ -87,6 +87,14 @@ Endpoint = 201.57.242.12:4115
 
 [Interface]
 ListenPort = 10000
+```
+
+ - Also send regular requests to update your information about the peers. Use a different, odd-numbered client source port so as not to update the port number used for WireGuard packets.
+
+```
+   $ ./wgsigc server-hostname 1223 $(cat wg_pubkey) secret 10001
+
+	[ ... Updated WireGuard configuration skeleton follows ... ]
 ```
 
 ### Limitations (with respect to documented protocol), might be removed one day:
