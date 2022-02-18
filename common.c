@@ -70,15 +70,15 @@ void print_record(uint8_t *rec, unsigned char *my_peer_id, uint8_t wgconf_format
 			else 
 				printf("  ");
 		}
-		printf("%s %hhd.%hhd.%hhd.%hhd:%hd ", peerid_b64, (ip&255), (ip >> 8)&255, (ip >> 16)&255, (ip >> 24)&255, port);
+		printf("%s %hhu.%hhu.%hhu.%hhu:%hu ", peerid_b64, (ip&255), (ip >> 8)&255, (ip >> 16)&255, (ip >> 24)&255, port);
 		if(timediff)
 			printf("%d\n", timediff);
 		else
 			printf("\n");
 	} else {
 		if(my_peer_id && !memcmp(rec, my_peer_id, peer_id_size)) 
-			printf("# Public endpoint = %hhd.%hhd.%hhd.%hhd:%hd\n\n", (ip&255), (ip >> 8)&255, (ip >> 16)&255, (ip >> 24)&255, port);
+			printf("# Public endpoint = %hhu.%hhu.%hhu.%hhu:%hu\n\n", (ip&255), (ip >> 8)&255, (ip >> 16)&255, (ip >> 24)&255, port);
 		else 
-			printf("[Peer]\n# Seen %d s ago\nPublicKey = %s\nEndpoint = %hhd.%hhd.%hhd.%hhd:%hd\n\n", timediff, peerid_b64, ip&255, (ip>>8)&255, (ip>>16)&255, (ip>>24)&255, port);
+			printf("[Peer]\n# Seen %d s ago\nPublicKey = %s\nEndpoint = %hhu.%hhu.%hhu.%hhu:%hu\n\n", timediff, peerid_b64, ip&255, (ip>>8)&255, (ip>>16)&255, (ip>>24)&255, port);
 	}
 }
