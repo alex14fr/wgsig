@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
 	hmac_sha256(outpacket+pkt_hmac_off, outpacket, pkt_size-hmac_size, secret, secret_size);
 	//for(int i=0;i<pkt_size;i++) { printf("%x ",outpacket[i]); } printf("\n");
 	// send request datagram
-	if(sendto_clear(sock,outpacket,pkt_size,(struct sockaddr*)&saddr,sizeof(struct sockaddr_in))<0) {
+	if(sendto_clear(sock,outpacket,pkt_size,(struct sockaddr*)&saddr,sizeof(struct sockaddr_in),0/*group*/)<0) {
 		perror("sendto");
 		exit(1);
 	}
@@ -120,7 +120,7 @@ int main(int argc, char **argv) {
 	uint8_t endrecv=0;
 	while(!endrecv) {
 		//if(recvfrom(sock,inpacket,keep_peers*rec_size+8+hmac_size,0,(struct sockaddr*)&saddr,&addrlen)<0) {
-		if(recvfrom_clear(sock, inpacket, keep_peers*rec_size+8+hmac_size,(struct sockaddr*)&saddr,&addrlen,NULL)<0) {
+		if(recvfrom_clear(sock, inpacket, keep_peers*rec_size+8+hmac_size,(struct sockaddr*)&saddr,&addrlen,NULL/*group*/)<0) {
 			perror("recvfrom");
 			exit(1);
 		}

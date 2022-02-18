@@ -155,7 +155,7 @@ int main(int argc, char **argv) {
 	unsigned char inpacket[pkt_size];
 	// loop through received datagrams
 	// we do not fork as each received datagram can be processed quickly
-	while(recvfrom_clear(sock,inpacket,pkt_size,(struct sockaddr*)&cl_addr,&cl_addrlen,NULL)) {
+	while(recvfrom_clear(sock,inpacket,pkt_size,(struct sockaddr*)&cl_addr,&cl_addrlen,NULL /*group*/)) {
 		if(packet_ok(inpacket)) {
 			// create record associated with this request
 			uint16_t clflg=*(uint16_t*)(inpacket+pkt_clflg_off);
@@ -175,7 +175,7 @@ int main(int argc, char **argv) {
 				peer_replace(this_peer, !(clflg&1));
 			}
 			// send response datagram
-			if(sendto_clear(sock,peer_data,rec_size*keep_peers+8+hmac_size,(struct sockaddr*)&cl_addr,cl_addrlen)<0) perror("sendto"); 
+			if(sendto_clear(sock,peer_data,rec_size*keep_peers+8+hmac_size,(struct sockaddr*)&cl_addr,cl_addrlen,0 /*group*/)<0) perror("sendto"); 
 		}
 	}
 	perror("recvfrom");

@@ -41,5 +41,5 @@ extern void read_secret(char *f);
 extern void print_record(uint8_t *rec, uint8_t *my_peer_id, uint8_t wgconf_format);
 /* enc_payload.c */
 extern int recvfrom_clear(int socket, uint8_t *inpacket, int clearsize, struct sockaddr *sa, socklen_t *salen, uint32_t *crypt_group);
-extern int sendto_clear(int socket, uint8_t *outpacket, int clearsize, struct sockaddr *sa, socklen_t salen);
+extern int sendto_clear(int socket, uint8_t *outpacket, int clearsize, struct sockaddr *sa, socklen_t salen, uint32_t crypt_group);
 

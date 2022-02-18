@@ -23,17 +23,17 @@ A single 32-byte secret key must be pre-shared between all the clients and the s
 
 Client and server programs are written in C99, use POSIX interface with endian(3)/byteorder(3) BSD extensions in <endian.h>, with no other dependencies. Optional support for encrypted payloads require either Linux getrandom(2) or BSD arc4random(3).
 
-Hardware and bandwidth requirements are very small: on an `x86_64` musl Linux host, for a statically-linked, fully stripped, -O2 compiled sizes are
+Hardware and bandwidth requirements are very small: on an `x86_64` musl Linux host, for a statically-linked, fully-stripped, -O3-compiled, with encrypted payloads, sizes are
 
 ```
-   text    data     bss     dec     hex filename
-	51118     600    2792   54510    d4ee wgsigc
-	28221     592    2384   31197    79dd wgsigd
+   text	   data	    bss	    dec	    hex	filename
+  67050	    600	   2920	  70570	  113aa	wgsigc
+  43981	    592	   2480	  47053	   b7cd	wgsigd
 ```
 
 The server do not perform any dynamic memory allocation. The only dynamic allocation by the client is caused by the DNS resolver (getaddrinfo(3)).
 
-Each client request generates two UDP datagrams, one in each direction. The request payload has 82 bytes, the response payload (by default) has 540 bytes.
+Each client request generates two UDP datagrams, one in each direction. Unencrypted request payload has 82 bytes, the response payload (by default) has 540 bytes; encryption adds 16 bytes to each payload.
 
 
 ### How to use:

@@ -76,8 +76,6 @@ void setup_chactx(chacha_ctx *chctx) {
 
 int recvfrom_clear(int socket, uint8_t *inpacket, int clearsize, struct sockaddr *sa, socklen_t *salen, uint32_t *crypt_group) {
 	assert(clearsize<=560);
-	if(crypt_group)
-		*crypt_group=0;
 	uint8_t inpacket_enc[577];
 	int ret;
 	if((ret=recvfrom(socket, inpacket_enc, clearsize+16, 0, sa, salen))<0) return(ret);
@@ -85,17 +83,23 @@ int recvfrom_clear(int socket, uint8_t *inpacket, int clearsize, struct sockaddr
 	setup_chactx(&chctx);
 	uint8_t nonce[12];
 	memcpy(&nonce,inpacket_enc+4,12);
+	uint32_t group;
+	memcpy(&group,inpacket_enc,4);
+	uint32_t gmask=(nonce[8]<<24)|(nonce[9]<<16)|(nonce[10]<<8)|nonce[11];
+	group=ntohl(group)^gmask;
+	if(crypt_group)
+		*crypt_group=group;
 	chacha_ivsetup(&chctx, nonce, 1);
 	chacha_encrypt_bytes(&chctx, inpacket_enc+16, inpacket, clearsize);
 	return(clearsize);
 }
 
-int sendto_clear(int socket, uint8_t *outpacket, int clearsize, struct sockaddr *sa, socklen_t salen) {
+int sendto_clear(int socket, uint8_t *outpacket, int clearsize, struct sockaddr *sa, socklen_t salen, uint32_t crypt_group) {
 	assert(clearsize<=560);
 	uint8_t nonce[12];
 	get_nonce(nonce);
 	uint32_t gmask=(nonce[8]<<24)|(nonce[9]<<16)|(nonce[10]<<8)|nonce[11];
-	uint32_t sgroup=htonl(0^gmask);
+	uint32_t sgroup=htonl(crypt_group^gmask);
 	chacha_ctx chctx;
 	setup_chactx(&chctx);
 	chacha_ivsetup(&chctx, nonce, 1);
