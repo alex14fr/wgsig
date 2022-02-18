@@ -21,7 +21,7 @@ A single 32-byte secret key must be pre-shared between all the clients and the s
 
 ### Requirements
 
-Client and server programs are written in ANSI C99, use POSIX interface with endian(3)/byteorder(3) BSD extensions in <endian.h>, with no other dependencies.
+Client and server programs are written in C99, use POSIX interface with endian(3)/byteorder(3) BSD extensions in <endian.h>, with no other dependencies.
 
 Hardware and bandwidth requirements are very small: on an `x86_64` musl Linux host, for a statically-linked, fully stripped, -O2 compiled sizes are
 

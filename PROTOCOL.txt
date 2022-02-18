@@ -47,7 +47,7 @@ Group secret :
   A private sequence of 32 bytes shared by the Server and a given Group.
 
 Request datagram :
-  The UDP datagram sent by a client to the public server endpoint to initiate the protocol.
+  A UDP datagram sent by a client to the public server endpoint to initiate the protocol.
 
 Response datagram : 
   A UDP datagram sent by the server to a client in response to the request packet.
@@ -67,7 +67,8 @@ TAI64N label :
   The real-time clocks of the clients and the server should ideally be synchronized, e.g. with NTP; at least they must be monotonic and fall within a window whose recommended halfwidth is 30 seconds.
 
 Server database for a group:
-  At a given time, the list of (Peer ID, Public endpoint, TAI64N of last valid received request datagram) collected for the group. The implementation can retain, at its choice, the N latest tuples, or the tuples received less than M seconds ago. Also, the precise storage format of the database and persistence conditions are implementation-specific.
+  At a given time, the list of (Peer ID, Public endpoint, TAI64N label) collected for peers in the group. The implementation can retain, at its choice, the N latest tuples, or the tuples received less than M seconds ago. Also, the precise storage format of the database and persistence conditions are implementation-specific.
+  The client may set specific bits in its request datagram (see CLFLG description in REQUEST DATAGRAM section) so as to ask not to modify the Public endpoint and/or TAI64N label stored in the server database.Hence, the server database does not necessarily reflect the data of the latest valid received request datagram. 
 
 HMAC-SHA256(X,K) :
   The sequence of 32 bytes given by applying to the variable-length byte sequence X the keyed hash function described in RFC 2104, instantiated with SHA-256 (RFC 4634) as iterated hash function and the sequence of 32 bytes K as key. In this protocol, K is the Group secret.
@@ -78,22 +79,29 @@ X || Y :
 X ^ Y :
   Exclusive-OR (XOR) of X and Y.
 
+X & Y :
+  Bitwise AND between X and Y.
+
+0xH0H1H2...Hn :
+  The sequence of hexadecimal bytes H0 H1 H2 ... Hn where Hi is
+  stored at offset i in memory.
 
 . REQUEST DATAGRAM
 
 Request is an UDP datagram of payload ReqP:
 
-    ReqP = ID || TAI64N || CLEXT || GROUP || HMAC
+    ReqP = ID || TAI64N || CLFLG || GROUP || HMAC
 
 where
 
     ID     :  [32 bytes]  Client's Peer ID
 	 TAI64N :  [12 bytes]  TAI64N label (s,n) at time of emission as returned by client's clock, in external TAI64N format: s || n
-    CLEXT  :  [ 2 bytes]  Integer giving optional extensions supported and requested by the client
+    CLFLG  :  [ 2 bytes]  Integer giving flags and optional extensions supported and requested by the client
     GROUP  :  [ 4 bytes]  Group ID
-	 HMAC   :  [32 bytes]  Authentication code: HMAC = HMAC-SHA256(ID || TAI64N || EXT || GROUP, Group secret)
+	 HMAC   :  [32 bytes]  Authentication code: HMAC = HMAC-SHA256(ID || TAI64N || CLFLG || GROUP, Group secret)
 
-CLEXT should be zero.
+CLFLG & 0x0001  is nonzero when the client requests not to update its endpoint information in server database
+CLFLG & 0x0002  is nonzero when the client requests not to update its TAI64N information in server database
 
 Request datagram payload is 82 bytes in size.
 
@@ -132,18 +140,20 @@ A RECn field is either:
 										PORT, 2-byte integer, are, respectively,
 									   the Source address,
 										and Source port,
-										of the last request datagram received by the 
-										server from client whose Peer ID is ID, and
+										of the last valid request datagram, with bit 0 
+										(least-significant bit) of CLFLG cleared,
+										received by the server from client whose 
+										Peer ID is ID, and
 										MASK is the scrambling integer 0x322DCCAC in 
 										network byte order.
-	 TAI64N   :  [12 bytes]  The TAI64N field of the last request datagram 
-	                         received by the server from client whose 
-									 Peer ID is ID
+	 TAI64N   :  [12 bytes]  The TAI64N field of the last valid request datagram,
+	 								 with bit 1 of CLFLG cleared, received by the 
+									 server from client whose Peer ID is ID
 
 
 . PROTOCOL
 
-1. Client prepares, sends the request datagram, and wait for the reception of (at least) one response datagram. If no response datagram is received within a reasonable timeout, the client can send another request datagram. If client is behind a NAT, this emission will initiate an external mapping which will be used later for communication between peers.
+1. Client prepares, sends the request datagram, with a zero CLFLG field, and wait for the reception of (at least) one response datagram. If no response datagram is received within a reasonable timeout, the client can send another request datagram. If client is behind a NAT, this emission will initiate an external mapping which will be used later for communication between peers.
 
 2. Upon reception of the request datagram, the server:
 
@@ -168,6 +178,10 @@ A RECn field is either:
    c) Process the database information contained in the packet's records, possibly using TAI64N to discard records that are too old to be relevant.
 
    d) If N_OTHER+1 response datagrams have not been received, wait for more response datagrams. If an other response datagram should be received but is not, within a reasonable timeout, client can send another request datagram and wait for responses.
+
+4. At regular time intervals (depending on the policy of the particular Wireguard VPN), the client can send request datagrams to receive updated information about its peers. Usually, the source port used for sending the initial request datagram is reused as listening port for Wireguard, so the subsequent request datagrams can be sent from a different source port. To prevent registering the external mapping of this new source port as the new Public endpoint for Wireguard, the bit 0 of CLFLG should be set in these subsequent request datagrams. It is up to the client to decide if bit 1 of CLFLG is be set or not so as to also update its TAI64N field.
+
+The client should also detect when its public endpoint changes and send request datagrams to trigger update of server database.
 
 
 . SECURITY CONSIDERATIONS
@@ -205,13 +219,15 @@ Any interception, optionally combined with replay, may prevent connectivity betw
 
 One can optionally replace a payload P by an encrypted payload P':
 
-P' = GROUP || NONCE || CHACHA20(SHA256(Group secret), 1, NONCE, P) || PAD
+P' = SGROUP || NONCE || CHACHA20(SHA256(Group secret), 1, NONCE, P) || PAD
 
 with:
 
-  GROUP : [ 4 bytes]   Group ID
-  NONCE : [12 bytes]   Random nonce (initialization vector)
-  PAD   : [variable]   Random pad to vary payload length
+  SGROUP : [ 4 bytes]   Scrambled Group ID : SGROUP = GROUP ^ NONCE_low4,
+  								where NONCE_low4 is NONCE & 0xffffffff truncated to
+								4-byte integer
+  NONCE  : [12 bytes]   Random nonce (initialization vector)
+  PAD    : [variable]   Random pad to vary payload length
 
   SHA256(X) is the 32-byte result of applying SHA-256 function (RFC 4634) to variable-length byte sequence X.
   CHACHA20(K, C, NONCE, P) is the ChaCha20 function described in RFC 8439, using 32-byte K as key, C for initial block counter, 12-byte NONCE as nonce, and variable-length byte sequence P as plaintext.
