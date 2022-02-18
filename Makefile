@@ -7,6 +7,9 @@ COMMON_OBJ = $(O)/base64.o $(O)/hmac_sha256.o $(O)/chacha20_simple.o $(O)/enc_pa
 
 all: $(O) $(BINS)
 
+PROTOCOL.txt: PROTOCOL.html
+	lynx -dump PROTOCOL.html > $@
+
 $(O):
 	mkdir $(O)
 
