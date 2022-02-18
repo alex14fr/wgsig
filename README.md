@@ -101,9 +101,8 @@ ListenPort = 10000
 
 ### Limitations (with respect to documented protocol), might be removed one day:
 
- - encrypted payload not supported
  - GROUP is ignored and replaced with 0
- - only one response datagram is sent, limiting the number of managed peers to 10; to overcome this limitation in a dirty way, one can increase the keep_peers macro definition in common.h; this (slightly) increases memory consumption, break compatibility with the documented protocol, and clients/server compiled with a different value of keep_peers, and may break when UDP datagrams larger than 576-byte payloads are not supported
+ - only one response datagram is sent, limiting the number of managed peers to 10
  - client does not discard old records returned by server
 
 
