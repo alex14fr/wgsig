@@ -70,7 +70,12 @@ int main(int argc, char **argv) {
 	sigaction(SIGALRM, &sa, NULL);
 	alarm(30);
 	// resolve remote hostname
-	getaddrinfo(argv[1],NULL,NULL,&ai_first);
+	struct addrinfo hints;
+	bzero(&hints,sizeof(struct addrinfo));
+	hints.ai_family=AF_INET;
+	hints.ai_socktype=SOCK_DGRAM;
+	hints.ai_protocol=IPPROTO_UDP;
+	getaddrinfo(argv[1],NULL,&hints,&ai_first);
 	for(ai=ai_first ; ai && ai->ai_family!=AF_INET ; ai=ai->ai_next );
 	if(!ai) {
 		printf("%s : host not found\n", argv[1]);
