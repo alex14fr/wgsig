@@ -2,6 +2,10 @@ CFLAGS = -O3 -Wall -D_BSD_SOURCE -std=c99
 LDFLAGS = -s
 O = .
 
+#Uncomment one of the following to enable encrypted payloads
+CFLAGS += -DENC_PAYLOAD -DHAS_GETRANDOM    # Linux
+#CFLAGS += -DENC_PAYLOAD -DHAS_ARC4RANDOM   # BSD
+
 BINS = $(O)/wgsigd $(O)/wgsigc
 COMMON_OBJ = $(O)/base64.o $(O)/hmac_sha256.o $(O)/enc_payload.o $(O)/common.o
 

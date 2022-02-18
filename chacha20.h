@@ -1,10 +1,14 @@
+
 /*
 chacha-merged.c version 20080118
 D. J. Bernstein
 Public domain.
+Modified to comply with RFC8439 (Initial counter of 1, 12-byte nonce as iv)
 */
 
 /* $OpenBSD: chacha_private.h,v 1.2 2013/10/04 07:02:27 djm Exp $ */
+
+#include <stddef.h>
 
 typedef unsigned char u8;
 typedef unsigned int u32;
@@ -49,10 +53,9 @@ typedef struct
   c = PLUS(c,d); b = ROTATE(XOR(b,c), 7);
 
 static const char sigma[16] = "expand 32-byte k";
-static const char tau[16] = "expand 16-byte k";
 
 static void
-chacha_keysetup(chacha_ctx *x,const u8 *k,u32 kbits,u32 ivbits)
+chacha_keysetup(chacha_ctx *x,const u8 *k)
 {
   const char *constants;
 
@@ -60,12 +63,12 @@ chacha_keysetup(chacha_ctx *x,const u8 *k,u32 kbits,u32 ivbits)
   x->input[5] = U8TO32_LITTLE(k + 4);
   x->input[6] = U8TO32_LITTLE(k + 8);
   x->input[7] = U8TO32_LITTLE(k + 12);
-  if (kbits == 256) { /* recommended */
+ // if (kbits == 256) { /* recommended */
     k += 16;
     constants = sigma;
-  } else { /* kbits == 128 */
-    constants = tau;
-  }
+ // } else { /* kbits == 128 */
+ //   constants = tau;
+ // }
   x->input[8] = U8TO32_LITTLE(k + 0);
   x->input[9] = U8TO32_LITTLE(k + 4);
   x->input[10] = U8TO32_LITTLE(k + 8);
@@ -77,12 +80,12 @@ chacha_keysetup(chacha_ctx *x,const u8 *k,u32 kbits,u32 ivbits)
 }
 
 static void
-chacha_ivsetup(chacha_ctx *x,const u8 *iv)
+chacha_ivsetup(chacha_ctx *x,const u8 *iv, const u32 ic)
 {
-  x->input[12] = 0;
-  x->input[13] = 0;
-  x->input[14] = U8TO32_LITTLE(iv + 0);
-  x->input[15] = U8TO32_LITTLE(iv + 4);
+  x->input[12] = ic; //0;
+  x->input[13] = U8TO32_LITTLE(iv + 0);
+  x->input[14] = U8TO32_LITTLE(iv + 4);
+  x->input[15] = U8TO32_LITTLE(iv + 8);
 }
 
 static void

@@ -33,6 +33,7 @@ extern void base64_encode(const unsigned char *src, size_t len, unsigned char *o
 extern void base64_decode(const unsigned char *src, size_t len, unsigned char *out);
 /* hmac_sha256.c */
 extern uint8_t str_nequ_ctime(uint8_t *s1, uint8_t *s2);
+extern void sha256_hash(unsigned char *buf, const unsigned char *data, size_t size);
 extern void hmac_sha256(uint8_t out[32], const uint8_t *data, size_t data_len, const uint8_t *key, size_t key_len);
 /* common.c */
 extern unsigned char secret[32];
