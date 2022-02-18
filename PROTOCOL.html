@@ -1,0 +1,280 @@
+<!doctype html>
+<meta charset=utf8>
+<meta name=viewport content=width=device-width>
+
+<title>NAT traversal and endpoint discovery protocol for Wireguard</title>
+
+<h1>NAT traversal and endpoint discovery protocol for Wireguard</h1>
+
+February 2022<br>
+Alexandre Janon &lt;alex14fr at gmail dot com&gt;<br>
+Project page : &lt;https://github.com/alex14fr/wgsig&gt;
+
+<h2>Goals</h2>
+
+<ul>
+  <li> Securely manage public key and endpoint configuration for a Wireguard VPN
+  <li> Provide UDP hole punching and address discovery for NATed peers
+</ul>
+
+<h2>Principle</h2>
+
+The protocol is organized around a central server and multiple clients.<p>
+
+The server is publicly-accessible, receive authenticated requests from the clients and distributes the collected configuration information (public keys, IP adresses, listening ports) about the VPN peers.<p>
+
+The server is not required to be a peer of the Wireguard VPN.<p>
+
+Each client sends its Wireguard public key to the server; the server determines the public endpoint (routable IP and port number) of the client, adds (or updates) information about the client in its database, and server replies with the public keys and public endpoints collected so far. <p>
+
+The client request is contained in a single UDP datagram, and server response consists of one or several UDP datagrams. It is the responsability of the client to poll the server regularly, in order to provide and fetch up-to-date information about its public endpoint and the public keys and public endpoints of its peers.<p>
+
+A single server can manage multiple independent Wireguard VPNs.
+
+
+<h2>Definitions and Prerequisites</h2>
+
+<dl>
+<dt>Endpoint : 
+<dd>  A pair, consisting of a 4-byte IPv4 address and a 2-byte UDP port number.
+
+<dt>Server : 
+<dd>  The network host running the server-side of the current protocol.
+
+<dt>Client : 
+<dd>  A network host running the client-side of the current protocol.
+
+<dt>Peer : 
+<dd>  A participant (peer) of the managed Wireguard VPN.
+
+<dt>Peer ID : 
+<dd>  A public sequence of 32 bytes, typically the Wireguard public key of the peer, eventually after base64 decoding of the 44-byte printable string.
+
+<dt>Group : 
+<dd>  A set of Peers participating in the same Wireguard VPN.
+
+<dt>Group ID : 
+<dd>  A public 4-byte integer shared by the Server and a given Group.
+
+<dt>Group secret : 
+<dd>  A private sequence of 32 bytes shared by the Server and a given Group.
+
+<dt>Request datagram :
+<dd>  A UDP datagram sent by a client to the public server endpoint to initiate the protocol.
+
+<dt>Response datagram : 
+<dd>  A UDP datagram sent by the server to a client in response to the request packet.
+
+<dt>Server endpoint :
+<dd> The destination endpoint of the request datagram, as well as the source endpoint of the response datagram.
+
+<dt>Public endpoint of a client :
+<dd>  The pair consisting of the Source address and Source port of the request datagram, as received by the server.<br>
+  A client must be able to receive UDP datagrams sent to his public endpoint from the server endpoint.<br>
+  For the protocol to be useful, a client must also be able to receive UDP datagrams sent to their public endpoint from the public endpoint of any of the peers. In RFC 4787 parlance, clients' NATs must have an "Endpoint-independent Mapping" behavior. In RFC 3489 parlance, clients' NATs must be of one of the "cone" types. When applicable, the filtering behavior (RFC 4787) or cone restriction (RFC 3489) is handled by the initiation packets sent by Wireguard.
+
+<dt>TAI64N label : 
+<dd>  A pair, consisting of a 8-byte integer s and a 4-byte integer n, and denoting a particular nanosecond in time: <ul>
+    <li>s denotes 2^62 plus the number of seconds after the beginning of 1970 TAI, 
+	 <li>n the number of nanoseconds since the beginning of the second denoted by s.</ul>
+  The real-time clocks of the clients and the server should ideally be synchronized, e.g. with NTP; at least they must be monotonic and fall within a window whose recommended halfwidth is 30 seconds.
+
+<dt>Server database for a group:
+<dd>  At a given time, the list of (Peer ID, Public endpoint, TAI64N label) collected for peers in the group. The implementation can retain, at its choice, the N latest tuples, or the tuples received less than M seconds ago. Also, the precise storage format of the database and persistence conditions are implementation-specific.
+  The client may set specific bits in its request datagram (see CLFLG description in REQUEST DATAGRAM section) so as to ask not to modify the Public endpoint and/or TAI64N label stored in the server database. Hence, the server database does not necessarily reflect the data of the latest valid received request datagram. 
+
+<dt>HMAC-SHA256(X,K) :
+<dd>  The sequence of 32 bytes given by applying to the variable-length byte sequence X the keyed hash function described in RFC 2104, instantiated with SHA-256 (RFC 4634) as iterated hash function and the sequence of 32 bytes K as key. In this protocol, K is the Group secret.
+
+<dt>X || Y :
+<dd>  Concatenation of X then Y. When X and/or Y are multibyte integer, network byte order is used.
+
+<dt>X ^ Y :
+<dd>  Exclusive-OR (XOR) of X and Y.
+
+<dt>X &amp; Y :
+<dd>  Bitwise AND between X and Y.
+
+<dt>0xH0H1H2...Hn :
+<dd>  The sequence of hexadecimal bytes H0 H1 H2 ... Hn where Hi is stored at offset i in memory.
+
+</dl>
+
+
+<h2>Request datagram</h2>
+
+Request datagram is an UDP datagram of payload ReqP:<p>
+
+    ReqP = ID || TAI64N || CLFLG || GROUP || HMAC <p>
+
+where<p>
+
+<dl>
+<dt>   ID     :  <dd> [32 bytes]  Client's Peer ID
+<dt>	 TAI64N :  <dd>[12 bytes]  TAI64N label (s,n) at time of emission as returned by client's clock, in external TAI64N format: s || n
+<dt>    CLFLG  :  <dd>[ 2 bytes]  Integer giving flags and optional extensions supported and requested by the client
+<dt>    GROUP  :  <dd>[ 4 bytes]  Group ID
+<dt>	 HMAC   :  <dd>[32 bytes]  Authentication code: HMAC = HMAC-SHA256(ID || TAI64N || CLFLG || GROUP, Group secret)
+</dl>
+
+<ul>
+<li> CLFLG &amp; 0x0001  is nonzero when the client requests not to update its endpoint information in server database
+<li>CLFLG &amp; 0x0002  is nonzero when the client requests not to update its TAI64N information in server database
+<li>No database modification should be performed by the server if the peer is not in the database and endpoint update is not requested.
+<li>A request to update endpoint information but not update TAI64N should be handled by the server as a request to update both endpoint and TAI64N (ie. CFLG &amp; 0x0003 zero).
+<li>Request datagram payload is 82 bytes in size.
+</ul>
+
+<h2>Response datagram</h2>
+
+Response datagrams share a common format; they are UDP datagrams of payload ResP:<p>
+
+    ResP = REC1 || REC2 || ... || REC10 || SVEXT || N_OTHER || GROUP || HMAC<p>
+
+<dl>
+
+<dt>    RECn    :  <dd>[50 bytes]  A database record (see below)
+<dt>    N_OTHER :  <dd>[ 2 bytes]  Integer giving the number of response datagrams, minus one
+<dt>	 SVEXT   :   <dd>[ 2 bytes]  Integer giving optional extensions accepted by server
+<dt>    GROUP   :  <dd>[ 4 bytes]  Group ID
+<dt>    HMAC    :  <dd>[32 bytes]  Authentication code: 
+                     HMAC=HMAC-SHA256(REC1 || ... || REC10 || SVEXT || N_OTHER || GROUP, Group secret)
+</dl>
+
+<ul>
+<li> SVEXT should be zero.
+<li> A reponse datagram payload is 540 bytes in size.
+</ul>
+
+<h2>Database record format</h2>
+
+A RECn field is either:
+<ul>
+    <li> A 50-byte sequence of zeros,
+    <li> Or: <p>
+
+	       RECn = ID || ENDPOINT || TAI64N
+   <dl>
+    <dt>ID       :  <dd>[32 bytes]  Client's Peer ID
+	 <dt>ENDPOINT :  <dd>[ 6 bytes]  ENDPOINT = (IP ^ MASK) || PORT,<br> with:  <dl>
+										<dt>MASK: <dd>the scrambling integer 0x322DCCAC in 
+										network byte order.
+									   <dt>IP: <dd>4-byte integer, source address 
+										<dt>PORT: <dd> 2-byte integer, source port </dl>
+										of the last valid request datagram having bit 0 
+										(least-significant bit) of CLFLG cleared,
+										received by the server from client whose 
+										Peer ID is ID.
+	 <dt>TAI64N   :  <dd>[12 bytes]  The TAI64N field of the last valid request datagram,
+	 								 with bit 1 of CLFLG cleared, received by the 
+									 server from client whose Peer ID is ID.
+	</dl>
+</ul>
+
+<h2>Protocol</h2>
+
+<ol>
+<li> Client prepares, sends the request datagram, with a zero CLFLG field, and wait for the reception of (at least) one response datagram. If no response datagram is received within a reasonable timeout, the client can send another request datagram. If client is behind a NAT, this emission will initiate an external mapping which will be used later for communication between peers.
+
+<li> Upon reception of the request datagram, the server:
+ <ol>
+   <li> Checks the payload for validity, that is to say, ignore request datagram (and optionally inform client of the error outside the current protocol's scope) if any one of those conditions is met:
+     <ul>
+      <li>SC1- GROUP is not recognized by server,
+		<li>SC2- optionally, ID is not present in a whitelist for GROUP stored by server,
+	   <li>SC3- TAI64N denotes a second more than HWd seconds after, or before, server's clock at time of reception,
+      <li>SC4- ID is already in a record (R) in server's database for GROUP, and TAI64N denotes a (second,nanosecond) that is equal, or less, in lexicographical order, than the (second,nanosecond) denoted by the TAI64N field of (R),
+		<li>SC5- HMAC is invalid, that is, is not equal to HMAC computed by server [especially when invalid packets are not silently ignored, comparison between received HMAC and computed HMAC must be made using constant-time comparison].
+	  </ul>
+
+   <li> Update its database for GROUP, either by inserting a new record if ID is not already present, or by replacing the existing record for ID, using the new TAI64N and new ENDPOINT computed from UDP packet header.
+
+   <li> Prepare and send response datagrams, using the updated state of the database for GROUP.
+  </ol>
+
+<li> Upon reception of a response datagram, the client:
+  <ol>
+    <li> Checks validity of GROUP.
+
+    <li> CC- Compute and verify HMAC; packets with invalid HMAC must be ignored and, optionally, the server can be notified by means that are outside of the current protocol's scope; especially in this case, comparison between the MACs must be made using constant-time comparison. 
+
+    <li> Process the database information contained in the packet's records, possibly using TAI64N to discard records that are too old to be relevant.
+
+    <li> If N_OTHER+1 response datagrams have not been received, wait for more response datagrams. If an other response datagram should be received but is not, within a reasonable timeout, client can send another request datagram and wait for responses.
+	</ol>
+
+<li> <ol><li>At regular time intervals (depending on the policy of the particular Wireguard VPN), the client can send request datagrams to receive updated information about its peers. Usually, the source port used for sending the initial request datagram is reused as listening port for Wireguard, so the subsequent request datagrams can be sent from a different source port. To prevent registering the external mapping of this new source port as the new Public endpoint for Wireguard, the bit 0 of CLFLG should be set in these subsequent request datagrams. It is up to the client to decide if bit 1 of CLFLG is be set or not so as to also update its TAI64N field.
+         <li>The client should also detect when its public endpoint changes and send request datagrams to trigger update of server database.
+	  </ol>  
+</ol>
+
+
+<h2>Security considerations</h2>
+<h3>Assumptions about HMAC function</h3>
+It is assumed that HMAC-SHA256 is "secure" in the sense that:
+<ul>
+<li> it is practically impossible to compute HMAC-SHA256(X, K) if K is not known, even if (X', HMAC-SHA256(X',K)) is known for an arbitrary number of payloads X', for any X which is not one of those X'
+<li> it is practically impossible to recover K from any arbitrary set of (X', HMAC-SHA256(X',K))
+</ul>
+
+<h3>Inspection of datagrams</h3>
+Request datagrams, as well as response datagrams, can be inspected, and/or sent using a spoof source IP address by an attacker. <p>
+
+Payloads exhibit some common structure (fixed size, bitmasks for TAI64N, presence of source port number in the payload at fixed locations, presence of scrambled IP address at fixed locations, ...) which renders them distinguishable from noise, leaking: the fact that the protocol is used, probably together with a Wireguard VPN, and possibly sensitive metadata (IP addresses, port numbers, public keys of peers), which may be eventually leaking anyway when using the VPN, and possibly triggering its filtering by middleboxes. <p>
+
+To alleviate this problem, it is possible to encrypt the payloads using a key derived from the Group secret, see APPENDIX.
+
+<h3>Protection against forged payloads</h3>
+Even when not using encrypted payloads, and putting aside the concerns of leaking metadata, the security of the managed Wireguard VPN (integrity and confidentiality of exchanged packets, authentication of the peers) should not be weakened by the use of the protocol.<p>
+
+It is crucial that an attacker can not send valid requests from its own endpoint, with its own public key, to a target server and group, as it would allow himself to be trusted by subsequent peers of the group, hence joining the VPN. This is prevented by the use of HMACs in request packets and validation by server at step SC5-. The optional use of a whitelist of public keys on the server for a particular group (SC2-) offers a substantial supplementary defense against this attack, which may be needed if the Group secret is known to the attacker.<p>
+
+<h3>Protection against replays and interceptions</h3>
+The memory and network resources alllocated to the treatment of a datagram (even if valid) are negligible, hence the potential of DoS using the protocol seems very limited.<p>
+
+The use of time counters :
+<ul>
+<li> avoids replays of requests for clients whose ID is in the database,
+<li> limits replays of requests for clients whose ID is not in the database to a ~ 1-minute window,
+<li> during response processing enables the client to check for and discard records that are too old (the relevant window to choose heavily depends on the particular policy of the managed VPN, hence no general recommendation can be made)
+</ul>
+
+Moreover, an eventually successful replay does not compromise Wireguard VPN security, even if the attacker can intercept and spoof one of the previous public endpoints, as long as the private, and ephemeral, keys of the peers are not known to the attacker.<p>
+
+Any interception, optionally combined with replay, may prevent connectivity between part of, or totality, of the peers; however an attacker able to intercept UDP datagrams should also be able to cause connectivity loss in any Wireguard VPN.
+
+
+<h2>Appendix: Encrypted payload format</h2>
+
+One can optionally replace a payload P by an encrypted payload P':<p>
+
+P' = SGROUP || NONCE || CHACHA20(SHA256(Group secret), 1, NONCE, P) || PAD<p>
+
+with:<dl>
+
+<dt>  SGROUP : <dd>[ 4 bytes]   Scrambled Group ID : SGROUP = GROUP ^ NONCE_low4,<br>
+  								where NONCE_low4 is NONCE & 0xffffffff truncated to
+								4-byte integer.
+<dt>  NONCE  : <dd>[12 bytes]   Random nonce (initialization vector).
+<dt>  PAD    : <dd>[variable]   Random pad to vary payload length.
+</dl>
+
+<ul>
+<li>  SHA256(X) is the 32-byte result of applying SHA-256 function (RFC 4634) to variable-length byte sequence X.
+<li>  CHACHA20(K, C, NONCE, P) is the ChaCha20 function described in RFC 8439, using 32-byte K as key, C for initial block counter, 12-byte NONCE as nonce, and variable-length byte sequence P as plaintext.
+<li> The size of an encrypted payload is 98 bytes (plus padding) for a request, 556 bytes (plus padding) for a response.
+</ul>
+
+<h2>References</h2>
+
+<dl>
+<dt>  RFC 2104 : <dd>HMAC: Keyed-Hashing for Message Authentication &lt;https://datatracker.ietf.org/doc/html/rfc2104&gt;
+<dt>  RFC 3489 : <dd>STUN - Simple Traversal of User Datagram Protocol (UDP) Through Network Address Translators (NATs) &lt;https://www.rfc-editor.org/rfc/rfc3489.html&gt;
+<dt>  RFC 4634 : <dd>US Secure Hash Algorithms (SHA and HMAC-SHA) &lt;https://www.rfc-editor.org/rfc/rfc4634.html&gt;
+<dt>  RFC 4787 : <dd>Network Address Translation (NAT) Behavioral Requirements for Unicast UDP &lt;https://www.rfc-editor.org/rfc/rfc4787.html&gt;
+<dt>  RFC 8439 : <dd>ChaCha20 and Poly1305 for IETF Protocols &lt;https://www.rfc-editor.org/rfc/rfc8439.html&gt;
+<dt>  TAI64 : <dd>&lt;https://cr.yp.to/libtai/tai64.html&gt;
+<dt>  Wireguard whitepaper : <dd>&lt;https://www.wireguard.com/papers/wireguard.pdf&gt;
+</dl>
+
+
