@@ -21,7 +21,7 @@ A single 32-byte secret key must be pre-shared between all the clients and the s
 
 ### Requirements
 
-Client and server programs are written in C99, use POSIX interface with endian(3)/byteorder(3) BSD extensions in <endian.h>, with no other dependencies.
+Client and server programs are written in C99, use POSIX interface with endian(3)/byteorder(3) BSD extensions in <endian.h>, with no other dependencies. Optional support for encrypted payloads require either Linux getrandom(2) or BSD arc4random(3).
 
 Hardware and bandwidth requirements are very small: on an `x86_64` musl Linux host, for a statically-linked, fully stripped, -O2 compiled sizes are
 
@@ -37,6 +37,8 @@ Each client request generates two UDP datagrams, one in each direction. The requ
 
 
 ### How to use:
+
+ - Edit the Makefile to 
 
  - Compile:
 
