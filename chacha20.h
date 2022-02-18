@@ -3,7 +3,7 @@
 chacha-merged.c version 20080118
 D. J. Bernstein
 Public domain.
-Modified to comply with RFC8439 (Initial counter of 1, 12-byte nonce as iv)
+Modified to comply with RFC8439 (Inputs are Key(32 bytes), Initial counter(4 bytes), Nonce/iv(12 bytes))
 */
 
 /* $OpenBSD: chacha_private.h,v 1.2 2013/10/04 07:02:27 djm Exp $ */
