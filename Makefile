@@ -4,7 +4,7 @@ LDFLAGS = -s
 O = .
 
 #Uncomment one of the following to enable encrypted payloads
-#CFLAGS += -DENC_PAYLOAD -DHAS_GETRANDOM    # Linux
+CFLAGS += -DENC_PAYLOAD -DHAS_GETRANDOM    # Linux
 #CFLAGS += -DENC_PAYLOAD -DHAS_ARC4RANDOM   # BSD
 
 BINS = $(O)/wgsigd $(O)/wgsigc
