@@ -44,5 +44,8 @@ Base64 encoding/decoding (RFC1341)
 Based on wpa_supplicant's utils/base64.c, Copyright (c) 2005-2011, Jouni Malinen <j@w1.fi>
 This software may be distributed under the terms of the BSD license.
 
+Simple Chacha20
+Copyright (C) 2014 insane coder (http://insanecoding.blogspot.com/, http://chacha20.insanecoding.org/)
+
 
 

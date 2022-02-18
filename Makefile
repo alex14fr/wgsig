@@ -1,9 +1,9 @@
-CFLAGS = -O2 -Wall -D_BSD_SOURCE -std=c99
+CFLAGS = -O3 -Wall -D_BSD_SOURCE -std=c99
 LDFLAGS = -s
 O = .
 
 BINS = $(O)/wgsigd $(O)/wgsigc
-COMMON_OBJ = $(O)/base64.o $(O)/hmac_sha256.o
+COMMON_OBJ = $(O)/base64.o $(O)/hmac_sha256.o $(O)/chacha20_simple.o $(O)/enc_payload.o
 
 all: $(O) $(BINS)
 

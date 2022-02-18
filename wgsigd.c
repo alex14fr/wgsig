@@ -28,6 +28,7 @@
  *
  */
 
+#include <inttypes.h>
 #include "common.h"
 
 // peer_data is the database storage in memory, in the format of the response payload
