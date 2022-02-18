@@ -8,7 +8,7 @@ Project page: <https://github.com/alex14fr/wgsig/>
 License: 2-clause BSD for wgsigc.c and wgsigd.c
 
 wgsigc and wgsigd are simple implementations of a subset of the
-protocol described in <PROTOCOL.txt>.
+protocol described in <https://github.com/alex14fr/wgsig/raw/master/PROTOCOL.txt>.
 
 ### Goal and prerequisites
 
