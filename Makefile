@@ -3,7 +3,7 @@ LDFLAGS = -s
 O = .
 
 BINS = $(O)/wgsigd $(O)/wgsigc
-COMMON_OBJ = $(O)/base64.o $(O)/hmac_sha256.o $(O)/chacha20_simple.o $(O)/enc_payload.o
+COMMON_OBJ = $(O)/base64.o $(O)/hmac_sha256.o $(O)/enc_payload.o
 
 all: $(O) $(BINS)
 
@@ -13,7 +13,7 @@ PROTOCOL.txt: PROTOCOL.html
 $(O):
 	mkdir $(O)
 
-$(O)/%.o: %.c common.h
+$(O)/%.o: %.c common.h chacha20.h
 	$(CC) -c $(CFLAGS) -o $@ $<
 
 $(O)/wgsigd: $(O)/wgsigd.o $(COMMON_OBJ)
