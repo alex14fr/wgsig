@@ -33,8 +33,8 @@
 
 // peer_data is the database storage in memory, in the format of the response payload
 // peer_ptr is the index of the next free (or oldest) slot in the array
-unsigned char peer_data[keep_peers*rec_size+8+hmac_size];
-unsigned int peer_ptr=0;
+static unsigned char peer_data[keep_peers*rec_size+8+hmac_size];
+static unsigned int peer_ptr=0;
 
 // search if a peer ID is in the database
 // if so, out contains its record
@@ -55,6 +55,7 @@ void peer_search(unsigned char peer_id[peer_id_size], unsigned char *out) {
 void peer_replace_at(int index, unsigned char new_peer[rec_size], uint16_t update_endpoint) {
 	if(update_endpoint) {
 		// update the whole record
+		printf("update whole rec, index=%d\n",index);
 		memcpy(peer_data+index*rec_size, new_peer, rec_size);
 	} else {
 		// update TAI64N counter only
@@ -81,6 +82,7 @@ void peer_replace(unsigned char new_peer[rec_size], uint16_t update_endpoint) {
 	if(update_endpoint) {
 		peer_replace_at(peer_ptr, new_peer, 1);
 		peer_ptr++;
+		if(peer_ptr==keep_peers) peer_ptr=0;
 	}
 }
 

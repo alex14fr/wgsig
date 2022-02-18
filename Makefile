@@ -1,9 +1,10 @@
-CFLAGS = -O3 -Wall -D_BSD_SOURCE -std=c99
+OLEVEL = -O3
+CFLAGS = $(OLEVEL) -Wall -D_BSD_SOURCE -std=c99
 LDFLAGS = -s
 O = .
 
 #Uncomment one of the following to enable encrypted payloads
-CFLAGS += -DENC_PAYLOAD -DHAS_GETRANDOM    # Linux
+#CFLAGS += -DENC_PAYLOAD -DHAS_GETRANDOM    # Linux
 #CFLAGS += -DENC_PAYLOAD -DHAS_ARC4RANDOM   # BSD
 
 BINS = $(O)/wgsigd $(O)/wgsigc

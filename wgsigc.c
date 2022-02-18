@@ -39,7 +39,7 @@ void alarm_handler(int x) {
 
 int main(int argc, char **argv) {
 	if(argc<6) {
-		printf("Usage : %s <remote_host> <remote_port> <base64_peerid> <secret_file> <local_port>\n<local_port> is even to request to update server's endpoint information", argv[0]);
+		printf("Usage : %s <remote_host> <remote_port> <base64_peerid> <secret_file> <local_port>\n<local_port> is even to request to update server's endpoint information\n", argv[0]);
 		exit(6);
 	}
 	if(strlen(argv[3])!=44) {

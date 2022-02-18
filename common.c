@@ -48,8 +48,8 @@ void read_secret(char *f) {
 
 // dump a record in terse format or Wireguard configuration skeleton format
 void print_record(uint8_t *rec, unsigned char *my_peer_id, uint8_t wgconf_format) {
-	unsigned char peerid_b64[44];
-	bzero(peerid_b64, 44);
+	unsigned char peerid_b64[45];
+	bzero(peerid_b64, 45);
 	base64_encode(rec, 32, peerid_b64); 
 	uint32_t ip;
 	memcpy(&ip,rec+addr_off,4);
@@ -64,19 +64,21 @@ void print_record(uint8_t *rec, unsigned char *my_peer_id, uint8_t wgconf_format
 	pkt_tai64=be64toh(pkt_tai64)&(~(((uint64_t)1)<<62));
 	timediff=(uint64_t)now-pkt_tai64;
 	if(!wgconf_format) {
-		if(my_peer_id && !memcmp(rec, my_peer_id, peer_id_size))
-			printf("* ");
-		else if(my_peer_id)
-			printf("  ");
-		printf("%s %d.%d.%d.%d:%d ", peerid_b64, (ip&255), (ip >> 8)&255, (ip >> 16)&255, (ip >> 24)&255, port);
+		if(my_peer_id) {
+			if(!memcmp(rec, my_peer_id, peer_id_size))
+				printf("* ");
+			else 
+				printf("  ");
+		}
+		printf("%s %hhd.%hhd.%hhd.%hhd:%hd ", peerid_b64, (ip&255), (ip >> 8)&255, (ip >> 16)&255, (ip >> 24)&255, port);
 		if(timediff)
 			printf("%d\n", timediff);
 		else
 			printf("\n");
 	} else {
 		if(my_peer_id && !memcmp(rec, my_peer_id, peer_id_size)) 
-			printf("# Public endpoint = %d.%d.%d.%d:%d\n\n", (ip&255), (ip >> 8)&255, (ip >> 16)&255, (ip >> 24)&255, port);
+			printf("# Public endpoint = %hhd.%hhd.%hhd.%hhd:%hd\n\n", (ip&255), (ip >> 8)&255, (ip >> 16)&255, (ip >> 24)&255, port);
 		else 
-			printf("[Peer]\n# Seen %d s ago\nPublicKey = %s\nEndpoint = %d.%d.%d.%d:%d\n\n", timediff, peerid_b64, ip&255, (ip>>8)&255, (ip>>16)&255, (ip>>24)&255, port);
+			printf("[Peer]\n# Seen %d s ago\nPublicKey = %s\nEndpoint = %hhd.%hhd.%hhd.%hhd:%hd\n\n", timediff, peerid_b64, ip&255, (ip>>8)&255, (ip>>16)&255, (ip>>24)&255, port);
 	}
 }

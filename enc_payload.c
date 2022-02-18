@@ -38,7 +38,7 @@ int recvfrom_clear(int socket, uint8_t *inpacket, int clearsize, struct sockaddr
 	return recvfrom(socket, inpacket, clearsize, 0, sa, salen);
 }
 
-int sendto_clear(int socket, uint8_t *outpacket, int clearsize, struct sockaddr *sa, socklen_t salen) {
+int sendto_clear(int socket, uint8_t *outpacket, int clearsize, struct sockaddr *sa, socklen_t salen, uint32_t crypt_group) {
 	return sendto(socket, outpacket, clearsize, 0, sa, salen);
 }
 #else
