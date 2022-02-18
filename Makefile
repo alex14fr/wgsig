@@ -3,7 +3,7 @@ LDFLAGS = -s
 O = .
 
 BINS = $(O)/wgsigd $(O)/wgsigc
-COMMON_OBJ = $(O)/base64.o $(O)/hmac_sha256.o $(O)/enc_payload.o
+COMMON_OBJ = $(O)/base64.o $(O)/hmac_sha256.o $(O)/enc_payload.o $(O)/common.o
 
 all: $(O) $(BINS)
 
