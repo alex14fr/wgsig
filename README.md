@@ -38,7 +38,7 @@ Each client request generates two UDP datagrams, one in each direction. The requ
 
 ### How to use:
 
- - Edit the Makefile to 
+ - Edit the Makefile to select if you use mandatory encryption of payloads, and, if this the case, the operating system interface you use for the cryptographic secure random number generator.
 
  - Compile:
 
