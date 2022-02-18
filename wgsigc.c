@@ -76,21 +76,19 @@ int main(int argc, char **argv) {
 	hints.ai_socktype=SOCK_DGRAM;
 	hints.ai_protocol=IPPROTO_UDP;
 	getaddrinfo(argv[1],NULL,&hints,&ai_first);
-	for(ai=ai_first ; ai && ai->ai_family!=AF_INET ; ai=ai->ai_next );
+	for(ai=ai_first ; ai && ai->ai_family!=AF_INET ; ai=ai->ai_next ) ;
 	if(!ai) {
 		printf("%s : host not found\n", argv[1]);
 		exit(3);
 	}
+	// fill destination address
+	struct sockaddr_in saddr;
+	memcpy(&saddr, ai->ai_addr, sizeof(struct sockaddr_in));
+	saddr.sin_port=htons(atoi(argv[2]));
 	if(ai_first) {
 		freeaddrinfo(ai_first);
 		ai_first=NULL;
 	}
-	// fill destination address
-	struct sockaddr_in saddr;
-	bzero(&saddr, sizeof(struct sockaddr_in));
-	saddr.sin_family=AF_INET;
-	saddr.sin_port=htons(atoi(argv[2]));
-	saddr.sin_addr.s_addr=(((struct sockaddr_in*)(ai->ai_addr))->sin_addr).s_addr;
 	// prepare request datagram
 	uint8_t outpacket[pkt_size];
 	bzero(outpacket, pkt_size);
