@@ -1,8 +1,10 @@
 # wgsigc wgsigd - (Wireguard signalling client, Wireguard signalling daemon)
 ## Implementation of a NAT traversal and endpoint discovery protocol for Wireguard
 
-Author: Alexandre Janon <alex14fr at gmail dot com>
+Author: Alexandre Janon `<alex14fr at gmail dot com>`
+
 Project page: <https://github.com/alex14fr/wgsig/>
+
 License: 2-clause BSD for wgsigc.c and wgsigd.c
 
 wgsigc and wgsigd are simple implementations of a subset of the
