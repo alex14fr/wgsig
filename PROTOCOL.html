@@ -262,6 +262,8 @@ with:<dl>
 <ul>
 <li>  SHA256(X) is the 32-byte result of applying SHA-256 function (RFC 4634) to variable-length byte sequence X.
 <li>  CHACHA20(K, C, NONCE, P) is the ChaCha20 function described in RFC 8439, using 32-byte K as key, C for initial block counter, 12-byte NONCE as nonce, and variable-length byte sequence P as plaintext.
+<li> The server receiving an encrypted request payload must check if the descrambled SGROUP matches the GROUP of the decrypted payload.
+<li> When using encrypted payloads, it is advised to silently ignore invalid packets.
 <li> The size of an encrypted payload is 98 bytes (plus padding) for a request, 556 bytes (plus padding) for a response.
 </ul>
 
@@ -275,6 +277,7 @@ with:<dl>
 <dt>  RFC 8439 : <dd>ChaCha20 and Poly1305 for IETF Protocols &lt;https://www.rfc-editor.org/rfc/rfc8439.html&gt;
 <dt>  TAI64 : <dd>&lt;https://cr.yp.to/libtai/tai64.html&gt;
 <dt>  Wireguard whitepaper : <dd>&lt;https://www.wireguard.com/papers/wireguard.pdf&gt;
+<dt>MAC-then-Encrypt/stream cipher : <td>The Order of Encryption and Authentication for Protecting Communications (Or: How Secure is SSL?) &lt;http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.106.5488&rep=rep1&type=pdf&gt;
 </dl>
 
 

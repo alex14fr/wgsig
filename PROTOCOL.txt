@@ -396,6 +396,10 @@ Appendix: Encrypted payload format
      * CHACHA20(K, C, NONCE, P) is the ChaCha20 function described in RFC
        8439, using 32-byte K as key, C for initial block counter, 12-byte
        NONCE as nonce, and variable-length byte sequence P as plaintext.
+     * The server receiving an encrypted request payload must check if the
+       descrambled SGROUP matches the GROUP of the decrypted payload.
+     * When using encrypted payloads, it is advised to silently ignore
+       invalid packets.
      * The size of an encrypted payload is 98 bytes (plus padding) for a
        request, 556 bytes (plus padding) for a response.
 
@@ -427,3 +431,9 @@ References
 
    Wireguard whitepaper :
           <https://www.wireguard.com/papers/wireguard.pdf>
+
+   MAC-then-Encrypt/stream cipher : The Order of Encryption and
+          Authentication for Protecting Communications (Or: How Secure is
+          SSL?)
+          <http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.106.54
+          88&rep=rep1&type=pdf>
