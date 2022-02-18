@@ -44,9 +44,9 @@ void read_secret(char *f) {
 	int fs=fstat(fd,&statbuf);
 	if(fs<0 || ( statbuf.st_mode!=(S_IFREG|S_IRUSR) && statbuf.st_mode!=(S_IFREG|S_IRUSR|S_IWUSR) )) {
 		printf("file %s must be regular file, chmod 0400 or 0600\n", f);
-		exit(1);
+		exit(6);
 	}
-	if(read(fd,secret,32)<32) { printf("secret must be 32 bytes long\n"); exit(1); }
+	if(read(fd,secret,32)<32) { printf("secret must be 32 bytes long\n"); exit(6); }
 	close(fd);
 }
 

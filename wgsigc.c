@@ -30,30 +30,28 @@
 
 #include "common.h"
 #include <netdb.h>
+#include <signal.h>
+
+void alarm_handler(int x) {
+	printf("Timed out\n");
+	exit(2);
+}
 
 int main(int argc, char **argv) {
 	if(argc<6) {
 		printf("Usage : %s <remote_host> <remote_port> <base64_peerid> <secret_file> <local_port>\n<local_port> is even to request to update server's endpoint information", argv[0]);
-		exit(0);
+		exit(6);
 	}
 	if(strlen(argv[3])!=44) {
 		printf("peerid must be 44 chars long\n");
-		exit(0);
+		exit(6);
 	}
 	// read Group secret from supplied file
 	read_secret(argv[4]);
 	// base64-decode Peer ID
 	unsigned char my_id[32];
 	base64_decode((unsigned char*)argv[3],44,my_id);
-	// resolve remote hostname
-	struct addrinfo *ai;
-	getaddrinfo(argv[1],NULL,NULL,&ai);
-	for( ; ai && ai->ai_family!=AF_INET ; ai=ai->ai_next );
-	if(!ai) {
-		printf("%s not found\n", argv[1]);
-		exit(0);
-	}
-	freeaddrinfo(ai);
+	struct addrinfo *ai, *ai_first=NULL;
 	// prepare connection to remote server
 	unsigned int sock=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	struct sockaddr_in laddr;
@@ -65,6 +63,24 @@ int main(int argc, char **argv) {
 		perror("bind");
 		exit(1);
 	}
+	// install timeout signal handler
+	struct sigaction sa;
+	bzero(&sa, sizeof(struct sigaction));
+	sa.sa_handler=alarm_handler;
+	sigaction(SIGALRM, &sa, NULL);
+	alarm(30);
+	// resolve remote hostname
+	getaddrinfo(argv[1],NULL,NULL,&ai_first);
+	for(ai=ai_first ; ai && ai->ai_family!=AF_INET ; ai=ai->ai_next );
+	if(!ai) {
+		printf("%s : host not found\n", argv[1]);
+		exit(3);
+	}
+	if(ai_first) {
+		freeaddrinfo(ai_first);
+		ai_first=NULL;
+	}
+	// fill destination address
 	struct sockaddr_in saddr;
 	bzero(&saddr, sizeof(struct sockaddr_in));
 	saddr.sin_family=AF_INET;
@@ -94,6 +110,7 @@ int main(int argc, char **argv) {
 		perror("sendto");
 		exit(1);
 	}
+
 	// receive response datagram(s)
 	uint8_t inpacket[keep_peers*rec_size+8+hmac_size];
 	unsigned int addrlen=sizeof(struct sockaddr_in);
