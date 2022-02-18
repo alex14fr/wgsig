@@ -17,7 +17,7 @@ $(O)/wgsigd: $(O)/wgsigd.o $(COMMON_OBJ)
 	$(CC) $(LDFLAGS) -o $@ $(O)/wgsigd.o $(COMMON_OBJ)
 
 $(O)/wgsigc: $(O)/wgsigc.o $(COMMON_OBJ)
-	$(CC) $(LDFLAGS) -o $@ $(O)/wgsigd.o $(COMMON_OBJ)
+	$(CC) $(LDFLAGS) -o $@ $(O)/wgsigc.o $(COMMON_OBJ)
 
 clean:
 	rm -f $(BINS) $(COMMON_OBJ) $(O)/wgsigd.o $(O)/wgsigc.o
