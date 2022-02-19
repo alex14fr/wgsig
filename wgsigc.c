@@ -137,6 +137,15 @@ int main(int argc, char **argv) {
 					if(inpacket[i*rec_size+j]) {
 						// found non-zero record, print corresponding Wireguard configuration
 						print_record(inpacket+i*rec_size, my_id, 1);
+						if(atoi(argv[5]) % 2 == 0) {
+							// ping the peer
+							memcpy(&(saddr.sin_addr),inpacket+i*rec_size+peer_id_size,4);
+							saddr.sin_addr.s_addr^=ip_mask;
+							memcpy(&(saddr.sin_port),inpacket+i*rec_size+peer_id_size+4,2);
+							long x=random();
+							memcpy(outpacket, &x, sizeof(long));
+							if(sendto(sock, outpacket, sizeof(long), 0, (struct sockaddr*)&saddr, sizeof(struct sockaddr_in))<0) { perror("sendto"); }
+						}
 						break;
 					}
 				}
